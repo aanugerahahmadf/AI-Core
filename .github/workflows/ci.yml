@@ -41,11 +41,7 @@ jobs:
           pip install pytest pylint
 
       - name: Prepare data directories
-        run: python -c "
-import os
-for d in ['data/inputs', 'data/features', 'data/uploads', 'data/evaluation', 'reports/images']:
-    os.makedirs(d, exist_ok=True)
-"
+        run: python -c "import os; [os.makedirs(d, exist_ok=True) for d in ['data/inputs', 'data/features', 'data/uploads', 'data/evaluation', 'reports/images']]"
 
       - name: Rebuild feature index
         run: python -m src.features.build_features --method combined
