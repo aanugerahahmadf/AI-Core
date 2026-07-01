@@ -1,0 +1,44 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+.venv_local
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Data and Models
+data/*.json
+data/*.pkl
+data/features/
+data/inputs/
+data/uploads/
+data/evaluation/
+models/*.pth
+models/*.h5
+models/*.weights
+
+# Bootstrap
+get-pip.py
+
+# Logs
+*.log
+
+# Temp
+temp/
+debug/
+reports/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
