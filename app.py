@@ -61,6 +61,7 @@ except ImportError:
 from src.addons.data import load_feature_database, save_feature_database, resolve_portable_path
 from src.addons.extraction.extractor import get_extractor
 from src.addons.finder import get_finder
+from src.addons.image_arithmetic import arithmetic_search, OPS
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -295,6 +296,8 @@ def index():
             "POST /api/index/clear"               : "Clear index",
             "POST /api/features/extract"          : "Extract features from image",
             "POST /api/sync"                      : "Trigger ai_sync.py (php artisan ai:sync)",
+            "POST /api/arithmetic"                : "Aritmetika Citra: +, -, ×, ÷ antar gambar (AI fusion)",
+            "GET  /api/arithmetic/ops"            : "Daftar operasi aritmetika yang tersedia",
         },
     })
 
@@ -756,6 +759,71 @@ def server_error(e):
 # Entry point
 # ---------------------------------------------------------------------------
 
+@app.route("/api/arithmetic", methods=["POST"])
+def arithmetic_search_endpoint():
+    """
+    Aritmetika Citra: gabungkan 2+ gambar dengan operasi +, -, ×, ÷
+    lalu cari hasilnya di database.
+
+    Request (JSON):
+    {
+      "images": ["/path/gambar1.jpg", "/path/gambar2.jpg"],
+      "operation": "add|average|subtract|multiply|divide",
+      "top_k": 20,
+      "method": "combined",
+      "metric": "euclidean",
+      "weights": [0.7, 0.3]       // optional, khusus 'add'
+    }
+
+    Response: { "success": true, "results": [...], "operation": {...}, ... }
+    """
+    t0 = time.perf_counter()
+    try:
+        data = request.get_json(force=True)
+        if not data or "images" not in data:
+            return jsonify({"error": "Field 'images' (list of paths) required"}), 400
+
+        images = data["images"]
+        if not isinstance(images, list) or len(images) < 1:
+            return jsonify({"error": "'images' must be a list with at least 1 path"}), 400
+
+        operation = data.get("operation", "average")
+        top_k = max(1, min(int(data.get("top_k", 20)), 50))
+        method = data.get("method", EXTRACT_METHOD)
+        metric = data.get("metric", FIND_METRIC)
+        weights = data.get("weights")
+
+        result = arithmetic_search(
+            image_paths=images,
+            operation=operation,
+            method=method,
+            metric=metric,
+            top_k=top_k,
+            db_path=FEATURE_DB,
+            weights=weights,
+        )
+        result["server_time_seconds"] = round(time.perf_counter() - t0, 4)
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": f"Arithmetic search failed: {str(e)}"}), 500
+
+
+@app.route("/api/arithmetic/ops", methods=["GET"])
+def arithmetic_ops():
+    """Daftar operasi aritmetika yang tersedia."""
+    return jsonify({
+        "operations": {
+            name: {"symbol": sym, "description": desc}
+            for name, (_, sym, desc) in OPS.items()
+        }
+    })
+
+
 if __name__ == "__main__":
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -780,6 +848,8 @@ if __name__ == "__main__":
     print("    POST /api/index/remove               <- CBIRService::removeFromIndex()")
     print("    POST /api/index/rebuild-from-dataset <- SyncCbirCsv.php")
     print("    POST /api/sync                       <- php artisan ai:sync")
+    print("    POST /api/arithmetic                 <- Aritmetika Citra (+, -, ×, ÷)")
+    print("    GET  /api/arithmetic/ops             <- Daftar operasi aritmetika")
     print("    GET  /status                         <- CBIRController::getStats()")
     print("=" * 55)
 
