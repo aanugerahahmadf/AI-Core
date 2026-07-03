@@ -62,6 +62,7 @@ from src.addons.data import load_feature_database, save_feature_database, resolv
 from src.addons.extraction.extractor import get_extractor
 from src.addons.finder import get_finder
 from src.addons.image_arithmetic import arithmetic_search, OPS
+from src.addons.rerank import rerank_by_ensemble
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -204,7 +205,7 @@ ALLOWED_EXT   = {"png", "jpg", "jpeg", "bmp", "webp"}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MB
 
 EXTRACT_METHOD = os.environ.get("CBIR_METHOD", "combined")
-FIND_METRIC    = os.environ.get("CBIR_METRIC", "euclidean")
+FIND_METRIC    = os.environ.get("CBIR_METRIC", "cosine")
 LARAVEL_URL    = os.environ.get("LARAVEL_APP_URL", "http://127.0.0.1:8000")
 
 # ---------------------------------------------------------------------------
@@ -413,6 +414,33 @@ def search_similar():
             scores.append((finder.compute(query_feat, candidate), entry))
 
         scores.sort(key=lambda x: x[0], reverse=is_sim)
+
+        # --- Re-ranking ensemble (post-processing) ---
+        should_rerank = (request.form.get("rerank", "true").lower() == "true" or
+                         (request.is_json and (request.json or {}).get("rerank", True)))
+        if should_rerank and len(scores) > 1:
+            try:
+                reranked = rerank_by_ensemble(
+                    query_emb=query_feat,
+                    candidates=scores,
+                    db_entries=images,
+                    metric=FIND_METRIC,
+                    top_k=top_k,
+                )
+                scores = [(entry.get("_rerank_score", s), entry)
+                          for s, entry in scores[:len(reranked)]
+                          if any(r.get("metadata", {}).get("owner_id") == entry.get("metadata", {}).get("owner_id")
+                                 for r in reranked)]
+                # Re-map from reranked list
+                score_map = {}
+                for entry in reranked:
+                    oid = entry.get("metadata", {}).get("owner_id")
+                    score_map[oid] = entry.get("_rerank_score", 0)
+                scores = [(score_map.get(entry.get("metadata", {}).get("owner_id"), s), entry)
+                          for s, entry in scores[:top_k]
+                          if entry.get("metadata", {}).get("owner_id") in score_map]
+            except Exception:
+                pass
 
         # --- Format hasil (kompatibel dengan CBIRService.php) ---
         results = []
@@ -765,33 +793,47 @@ def arithmetic_search_endpoint():
     Aritmetika Citra: gabungkan 2+ gambar dengan operasi +, -, ×, ÷
     lalu cari hasilnya di database.
 
-    Request (JSON):
-    {
-      "images": ["/path/gambar1.jpg", "/path/gambar2.jpg"],
-      "operation": "add|average|subtract|multiply|divide",
-      "top_k": 20,
-      "method": "combined",
-      "metric": "euclidean",
-      "weights": [0.7, 0.3]       // optional, khusus 'add'
-    }
+    Request:
+      JSON: { "images": ["/path/gbr1.jpg", "/path/gbr2.jpg"], "operation": "...", ... }
+      ATAU multipart: files image_1, image_2 + form fields operation, top_k, ...
 
     Response: { "success": true, "results": [...], "operation": {...}, ... }
     """
     t0 = time.perf_counter()
     try:
-        data = request.get_json(force=True)
-        if not data or "images" not in data:
-            return jsonify({"error": "Field 'images' (list of paths) required"}), 400
+        images = []
 
-        images = data["images"]
-        if not isinstance(images, list) or len(images) < 1:
-            return jsonify({"error": "'images' must be a list with at least 1 path"}), 400
+        # --- Coba baca dari upload files ---
+        f1 = request.files.get("image_1")
+        f2 = request.files.get("image_2")
+        if f1 and f1.filename:
+            images.append(save_upload(f1, f1.filename))
+        if f2 and f2.filename:
+            images.append(save_upload(f2, f2.filename))
 
-        operation = data.get("operation", "average")
-        top_k = max(1, min(int(data.get("top_k", 20)), 50))
-        method = data.get("method", EXTRACT_METHOD)
-        metric = data.get("metric", FIND_METRIC)
-        weights = data.get("weights")
+        # --- Kalau tidak ada file, baca dari JSON ---
+        if not images:
+            data = request.get_json(force=True) if request.is_json else {}
+            raw = data.get("images", []) if isinstance(data, dict) else []
+            if not isinstance(raw, list) or len(raw) < 1:
+                return jsonify({"error": "Upload 2 file (image_1, image_2) atau kirim JSON 'images'"}), 400
+            # Resolve portable path bila perlu
+            for p in raw:
+                resolved = resolve_portable_path(p) if not os.path.exists(p) else p
+                images.append(resolved)
+
+        if len(images) < 1:
+            return jsonify({"error": "Minimal 1 gambar diperlukan"}), 400
+
+        # --- Baca parameter ---
+        json_data = request.get_json(silent=True) if request.is_json else {}
+        if not isinstance(json_data, dict):
+            json_data = {}
+        operation = request.form.get("operation") or json_data.get("operation", "average")
+        top_k = max(1, min(int(request.form.get("top_k") or json_data.get("top_k", 20)), 50))
+        method = request.form.get("method") or json_data.get("method", EXTRACT_METHOD)
+        metric = request.form.get("metric") or json_data.get("metric", FIND_METRIC)
+        weights = json_data.get("weights")
 
         result = arithmetic_search(
             image_paths=images,
