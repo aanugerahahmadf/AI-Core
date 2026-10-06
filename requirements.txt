@@ -1,14 +1,16 @@
 ﻿# Wedding CBIR AI Core - Dependencies
 # Install: pip install -r requirements.txt
 
-# Deep Learning (ResNet50, EfficientNet, VGG16)
+# Deep Learning (ResNet50, EfficientNet, VGG16, FaceNet)
 torch>=2.0.0
 torchvision>=0.15.0
+facenet-pytorch>=2.6.0
 
 # Computer Vision
-opencv-python>=4.7.0
+opencv-python>=4.7.0,<5
 Pillow>=9.5.0
 imagehash>=4.3.0
+easyocr>=1.7.0
 
 # Scientific Computing
 numpy>=1.24.0

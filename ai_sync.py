@@ -30,6 +30,7 @@ import time
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
+CLEAN_CSV = os.path.join(DATA_DIR, "inputs", "dataset_clean.csv")
 
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -83,8 +84,10 @@ def sync_features_to_csv(csv_path: str, metadata_path: str) -> None:
         print(f"[WARN] metadata.json tidak ditemukan di: {metadata_path}")
         return
 
-    with open(metadata_path, encoding="utf-8") as f:
-        db = json.load(f)
+    # Pakai loader bercache supaya metadata.json besar tidak di-parse ulang.
+    from src.addons.data import load_feature_database
+
+    db = load_feature_database(metadata_path)
 
     # Bangun lookup: "owner_id_type" → dict semua fitur
     lookup: dict[str, dict] = {}
@@ -167,6 +170,26 @@ def sync_features_to_csv(csv_path: str, metadata_path: str) -> None:
     print(f"[SYNC] CSV disimpan: {csv_path}")
 
 
+def prepare_clean_csv(csv_path: str) -> str:
+    """
+    Buat data/inputs/dataset_clean.csv dari dataset.csv (validasi & bersihkan).
+
+    Selalu menghasilkan clean CSV terbaru agar data/inputs/ terisi dan terkini.
+    Returns path ke clean CSV yang akan dipakai untuk ekstraksi fitur.
+    """
+    from src.dataset.build_dataset import build_dataset
+
+    print(f"\n[STEP 0] Validasi & bersihkan dataset -> {CLEAN_CSV}")
+    try:
+        result = build_dataset(csv_path=csv_path, output_path=CLEAN_CSV)
+        print(f"  Total valid : {result.get('total_valid')} | diskip: {result.get('skipped')}")
+        if os.path.exists(CLEAN_CSV):
+            return CLEAN_CSV
+    except Exception as e:
+        print(f"[WARN] Gagal build_dataset ({e}), lanjut pakai dataset.csv langsung.")
+    return csv_path
+
+
 def main(csv_path: str, app_url: str, method: str = "combined") -> int:
     """
     Main entry point.
@@ -188,12 +211,15 @@ def main(csv_path: str, app_url: str, method: str = "combined") -> int:
         print("Pastikan Laravel sudah generate CSV terlebih dahulu.")
         return 1
 
+    # Step 0: Validasi & bersihkan dataset ke data/inputs/dataset_clean.csv
+    feature_csv = prepare_clean_csv(csv_path)
+
     # Step 1: Build features → update metadata.json
     print("[STEP 1] Ekstrak fitur dari gambar...")
     from src.features.build_features import build_features
     result = build_features(
         method   = method,
-        csv_path = csv_path,
+        csv_path = feature_csv,
         app_url  = app_url,
     )
 

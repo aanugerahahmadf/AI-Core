@@ -43,11 +43,19 @@ jobs:
       - name: Prepare data directories
         run: python -c "import os; [os.makedirs(d, exist_ok=True) for d in ['data/inputs', 'data/features', 'data/uploads', 'data/evaluation', 'reports/images']]"
 
+      # `data/dataset.csv` yang ikut ter-commit berisi path absolut Windows, jadi
+      # tidak ada satu pun yang resolve di runner Linux dan indeks yang terbangun
+      # jadi kosong. make_ci_fixture.py membuat gambar placeholder + CSV dengan
+      # path yang dihitung saat runtime, sehingga test CBIR benar-benar menguji
+      # ekstraksi fitur (dan 2 gambar per produk, untuk menangkap regresi dedup).
+      - name: Build CI fixture dataset
+        run: python make_ci_fixture.py
+
       - name: Rebuild feature index
         run: python -m src.features.build_features --method combined
 
       - name: Lint
-        run: pylint src/ app.py rebuild_index.py --rcfile=pylintrc --score=yes || true
+        run: pylint src/ app.py rebuild_index.py make_ci_fixture.py --rcfile=pylintrc --score=yes || true
 
       - name: Test
         run: python -m pytest tests/ -v --tb=short
@@ -76,6 +84,7 @@ jobs:
       - name: Prepare data
         run: |
           python -c "import os; [os.makedirs(d, exist_ok=True) for d in ['data/inputs', 'data/features', 'data/uploads', 'data/evaluation']]"
+          python make_ci_fixture.py
           python -m src.features.build_features --method combined
 
       - name: Check notebook executes

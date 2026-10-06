@@ -40,15 +40,54 @@ class TestDataLoading(unittest.TestCase):
         self.assertIn("package", types, "Tidak ada package di metadata.json")
 
     def test_metadata_no_duplicates(self):
+        """Indeks harus konsisten secara internal.
+
+        Satu produk boleh punya banyak gambar (galeri), jadi Combination
+        (type, owner_id) TIDAK boleh dijadikan kunci unik — itulah invarian
+        yang salah dan pernah membuat `/api/index/add` menghapus gambar galeri
+        produk lain setiap kali `php artisan ai:sync` berjalan.
+
+        Yang benar-benar harus unik hanyalah triple (type, owner_id, path):
+        entri yang sama persis tidak boleh muncul dua kali.
+        """
         from src.addons.data import load_feature_database
         db   = load_feature_database(METADATA)
         imgs = db.get("images", [])
         seen = set()
         for img in imgs:
+            m    = img.get("metadata", {})
+            path = img.get("path", "")
+            self.assertTrue(path, "Path kosong untuk id=" + str(img.get("id")))
+            key  = (m.get("type"), m.get("owner_id"), path)
+            self.assertNotIn(key, seen, "Entri identik terindex dua kali: %r" % (key,))
+            seen.add(key)
+
+    def test_metadata_ids_are_unique(self):
+        from src.addons.data import load_feature_database
+        db   = load_feature_database(METADATA)
+        ids  = [img.get("id") for img in db.get("images", [])]
+        self.assertEqual(len(ids), len(set(ids)), "Ada id entri yang kembar")
+
+    def test_metadata_gallery_images_are_preserved(self):
+        """Rebuild dari dataset harus mempertahankan semua gambar galeri.
+
+        Inilah yang hancur kalau `/api/index/add` kembali dedup per
+        (type, owner_id): tiap produk tinggal 1 gambar.
+        """
+        from src.addons.data import load_feature_database
+        db   = load_feature_database(METADATA)
+        imgs = db.get("images", [])
+        per_owner = {}
+        for img in imgs:
             m   = img.get("metadata", {})
             key = str(m.get("type")) + "_" + str(m.get("owner_id"))
-            self.assertNotIn(key, seen, "Duplikat ditemukan: " + key)
-            seen.add(key)
+            per_owner[key] = per_owner.get(key, 0) + 1
+        multi = {k: v for k, v in per_owner.items() if v > 1}
+        self.assertTrue(
+            multi,
+            "Tidak ada produk dengan lebih dari 1 gambar — indikasi indeks "
+            "telah menyusut akibat dedup per (type, owner_id)",
+        )
 
     def test_metadata_no_empty_names(self):
         from src.addons.data import load_feature_database

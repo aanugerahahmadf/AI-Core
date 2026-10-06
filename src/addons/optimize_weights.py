@@ -80,7 +80,6 @@ def grid_search_weights(
     db_path: str = "data/metadata.json",
     metric: str = "cosine",
     w_candidates: list[float] | None = None,
-    top_k: int = 20,
     sample_pct: float = 1.0,
 ) -> dict[str, Any]:
     if w_candidates is None:
@@ -114,7 +113,7 @@ def grid_search_weights(
             q_cat = q_entry.get("metadata", {}).get("category", "")
             q_owner = q_entry.get("metadata", {}).get("owner_id")
 
-            retrieved = _search_with_weights(images, qid, wd, wc, wt, metric)[:top_k]
+            retrieved = _search_with_weights(images, qid, wd, wc, wt, metric)
 
             relevant = set()
             for i, entry in enumerate(images):
@@ -145,5 +144,4 @@ def grid_search_weights(
         ],
         "n_queries": len(sample_idx),
         "metric": metric,
-        "top_k": top_k,
     }

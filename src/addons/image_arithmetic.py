@@ -100,7 +100,6 @@ def arithmetic_search(
     operation: str,
     method: str = "combined",
     metric: str = "euclidean",
-    top_k: int = 20,
     db_path: str = "data/metadata.json",
     weights: list[float] | None = None,
 ) -> dict:
@@ -112,7 +111,6 @@ def arithmetic_search(
         operation: 'add', 'average', 'subtract', 'multiply', 'divide'.
         method: Metode ekstraksi (default 'combined').
         metric: Metrik pencarian (default 'euclidean').
-        top_k: Jumlah hasil (default 20).
         db_path: Path metadata.json.
         weights: Bobot per gambar (khusus 'add').
 
@@ -173,7 +171,6 @@ def arithmetic_search(
         scores.append((finder.compute(query_vec, candidate), entry))
 
     scores.sort(key=lambda x: x[0], reverse=is_sim)
-    scores = scores[:top_k]
 
     results = [
         {

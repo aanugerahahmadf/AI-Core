@@ -1,7 +1,7 @@
-"""
-Wedding Organizer CBIR AI Core Package
+﻿"""
+Dekorasi Bunga Pernikahan / Wedding Flower Decorations CBIR AI Core Package
 This package contains the core AI modules for Content-Based Image Retrieval (CBIR)
-for the Wedding Organizer application.
+for the Dekorasi Bunga Pernikahan / Wedding Flower Decorations application.
 """
 
 __version__ = "0.1.0"

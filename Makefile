@@ -41,6 +41,8 @@ help:
 	@echo   Data:
 	@echo     make sync          Rebuild index dari dataset.csv (+ sync ke CSV)
 	@echo     make rebuild       Alias untuk sync
+	@echo     make dataset       Generate data/inputs/dataset_clean.csv
+	@echo     make evaluate      Evaluasi CBIR (hasil ke data/evaluation/)
 	@echo.
 	@echo   Testing:
 	@echo     make test          Jalankan semua tests
@@ -94,6 +96,14 @@ sync:
 	$(PYTHON) rebuild_index.py --csv $(CSV_PATH) --app-url $(APP_URL)
 
 rebuild: sync
+
+dataset:
+	@echo [DATASET] Generating clean dataset (data/inputs/dataset_clean.csv)...
+	$(PYTHON) -m src.dataset.build_dataset --csv $(CSV_PATH)
+
+evaluate:
+	@echo [EVALUATE] Running CBIR evaluation (saved to data/evaluation/)...
+	$(PYTHON) -m src.evaluation.run_evaluation --method combined --metric cosine
 
 # ==============================================================================
 # TESTING

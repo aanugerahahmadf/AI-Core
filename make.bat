@@ -28,6 +28,8 @@ if "%1"=="rebuild"      goto sync
 if "%1"=="test"         goto test
 if "%1"=="test-api"     goto test_api
 if "%1"=="test-cbir"    goto test_cbir
+if "%1"=="dataset"      goto dataset
+if "%1"=="evaluate"     goto evaluate
 if "%1"=="lint"         goto lint
 if "%1"=="check"        goto check
 if "%1"=="server"       goto server
@@ -52,6 +54,8 @@ echo.
 echo   Data:
 echo     make sync            Rebuild index dari dataset.csv (+ sync ke CSV)
 echo     make rebuild         Alias untuk sync
+echo     make dataset         Generate data\inputs\dataset_clean.csv
+echo     make evaluate        Evaluasi CBIR (hasil ke data\evaluation\)
 echo.
 echo   Testing:
 echo     make test            Jalankan semua tests
@@ -102,6 +106,16 @@ goto end
 :sync
 echo [SYNC] Rebuilding CBIR index from %CSV_PATH%...
 %PYTHON% rebuild_index.py --csv %CSV_PATH% --app-url %APP_URL%
+goto end
+
+:dataset
+echo [DATASET] Generating clean dataset (data\inputs\dataset_clean.csv)...
+%PYTHON% -m src.dataset.build_dataset --csv %CSV_PATH%
+goto end
+
+:evaluate
+echo [EVALUATE] Running CBIR evaluation (saved to data\evaluation\)...
+%PYTHON% -m src.evaluation.run_evaluation --method combined --metric cosine
 goto end
 
 :: ==============================================================================

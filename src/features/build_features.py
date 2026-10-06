@@ -18,12 +18,31 @@ CLEAN_CSV     = os.path.join(DATA_DIR, "inputs", "dataset_clean.csv")
 FEATURES_DIR  = os.path.join(DATA_DIR, "features")
 METADATA_JSON = os.path.join(DATA_DIR, "metadata.json")
 
+# Desimal yang disimpan untuk setiap komponen fitur vektor float.
+FLOAT_PRECISION = 6
+
 
 def compute_phash(image_path: str, hash_size: int = 8) -> str:
     try:
         return str(imagehash.phash(Image.open(image_path), hash_size=hash_size))
     except Exception:
         return ""
+
+
+def _vec(arr) -> list:
+    """
+    numpy array → list float, dibulatkan ke FLOAT_PRECISION desimal.
+
+    Vektor CBIR di-normalisasi (L1/cosine) sehingga 6 desimal jauh melebihi
+    presisi yang dibutuhkan, sementara `repr(float)` default menulis 17 digit
+    sehingga metadata.json membesar ~2x tanpa gunanya.
+
+    WAJIB lewat float64: float32 tidak bisa mewakili hasil round 6 desimal,
+    jadi .tolist() akan memunculkan kembali angka 17 digit.
+    """
+    import numpy as np
+
+    return np.round(np.asarray(arr, dtype=np.float64), FLOAT_PRECISION).tolist()
 
 
 def _resolve_csv():
@@ -79,27 +98,22 @@ def _extract_all_subfeatures(image_path: str, extractor, meth: str) -> dict:
 
         return {
             # Vektor utama — dipakai oleh app.py / CBIR engine
-            "combined"          : combined_vec.tolist(),
-            "combined_features" : combined_vec.tolist(),
+            "combined"          : _vec(combined_vec),
             # Deep Learning
-            "deep"              : resnet_f.tolist(),
-            "deep_features"     : resnet_f.tolist(),
-            "resnet50"          : resnet_f.tolist(),
-            "efficientnet"      : effnet_f.tolist(),
-            "vgg16"             : vgg_f.tolist(),
+            "deep"              : _vec(resnet_f),
+            "efficientnet"      : _vec(effnet_f),
+            "vgg16"             : _vec(vgg_f),
             # Color
-            "color"             : color_hsv.tolist(),
-            "color_histogram"   : color_hsv.tolist(),
-            "rgb_histogram"     : color_rgb.tolist(),
-            "dominant_color"    : dominant_f.tolist(),
+            "color"             : _vec(color_hsv),
+            "rgb_histogram"     : _vec(color_rgb),
+            "dominant_color"    : _vec(dominant_f),
             # Texture & Shape
-            "texture_features"  : lbp_f.tolist(),
-            "lbp"               : lbp_f.tolist(),
-            "gabor"             : gabor_f.tolist(),
-            "hog"               : hog_f.tolist(),
+            "lbp"               : _vec(lbp_f),
+            "gabor"             : _vec(gabor_f),
+            "hog"               : _vec(hog_f),
             # Keypoint
-            "sift"              : sift_f.tolist(),
-            "akaze"             : akaze_f.tolist(),
+            "sift"              : _vec(sift_f),
+            "akaze"             : _vec(akaze_f),
             # Meta
             "method"            : meth,
             "dim_combined"      : int(combined_vec.shape[0]),
@@ -119,23 +133,12 @@ def _extract_all_subfeatures(image_path: str, extractor, meth: str) -> dict:
         ]).astype(np.float32)
 
         return {
-            "combined"          : combined_vec.tolist(),
-            "combined_features" : combined_vec.tolist(),
-            "deep"              : deep_feat.tolist(),
-            "deep_features"     : deep_feat.tolist(),
-            "resnet50"          : deep_feat.tolist(),
-            "color"             : color_feat.tolist(),
-            "color_histogram"   : color_feat.tolist(),
-            "texture_features"  : texture_feat.tolist(),
-            "lbp"               : texture_feat.tolist(),
-            # placeholder kosong untuk key yang tidak diekstrak
-            "efficientnet"      : [],
-            "rgb_histogram"     : [],
-            "dominant_color"    : [],
-            "gabor"             : [],
-            "hog"               : [],
-            "sift"              : [],
-            "akaze"             : [],
+            "combined"          : _vec(combined_vec),
+            "deep"              : _vec(deep_feat),
+            "color"             : _vec(color_feat),
+            "lbp"               : _vec(texture_feat),
+            # Vektor tidak diekstrak pada method ini — save_feature_database()
+            # otomatis melewati slot yang kosong.
             "method"            : meth,
             "dim_combined"      : int(combined_vec.shape[0]),
             "dim_deep"          : int(deep_feat.shape[0]),
@@ -158,23 +161,18 @@ def _extract_all_subfeatures(image_path: str, extractor, meth: str) -> dict:
     akaze_f   = vec if meth in ("akaze", "orb")                      else empty
 
     return {
-        "combined"          : vec.tolist(),
-        "combined_features" : vec.tolist(),
-        "deep"              : deep_f.tolist(),
-        "deep_features"     : deep_f.tolist(),
-        "resnet50"          : deep_f.tolist(),
-        "efficientnet"      : effnet_f.tolist(),
-        "vgg16"             : vgg_f.tolist(),
-        "color"             : color_f.tolist(),
-        "color_histogram"   : color_f.tolist(),
-        "rgb_histogram"     : rgb_f.tolist(),
-        "dominant_color"    : dom_f.tolist(),
-        "texture_features"  : lbp_f.tolist(),
-        "lbp"               : lbp_f.tolist(),
-        "gabor"             : gabor_f.tolist(),
-        "hog"               : hog_f.tolist(),
-        "sift"              : sift_f.tolist(),
-        "akaze"             : akaze_f.tolist(),
+        "combined"          : _vec(vec),
+        "deep"              : _vec(deep_f),
+        "efficientnet"      : _vec(effnet_f),
+        "vgg16"             : _vec(vgg_f),
+        "color"             : _vec(color_f),
+        "rgb_histogram"     : _vec(rgb_f),
+        "dominant_color"    : _vec(dom_f),
+        "lbp"               : _vec(lbp_f),
+        "gabor"             : _vec(gabor_f),
+        "hog"               : _vec(hog_f),
+        "sift"              : _vec(sift_f),
+        "akaze"             : _vec(akaze_f),
         "method"            : meth,
         "dim_combined"      : int(vec.shape[0]),
         "dim_deep"          : int(deep_f.shape[0]),
@@ -234,6 +232,7 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
             disc_price  = row.get("Discount_Price", "").strip()
             image_path  = row.get("Image_Path", "").strip()
             description = row.get("Description", "").strip()
+            organizer   = row.get("Organizer", "").strip()
 
             if item_type not in ("product", "package"):
                 item_type = "product"
@@ -279,6 +278,7 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
                         "description"   : description,
                         "image_url"     : image_url,
                         "image_path"    : image_path,
+                        "vendor"        : organizer,
                     },
                     "features": feat_dict,
                 }

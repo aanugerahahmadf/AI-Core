@@ -1,0 +1,16 @@
+.git
+.github
+.gitignore
+.venv
+.venv_local
+venv
+__pycache__
+*.pyc
+.pytest_cache
+*.log
+reports
+images
+tests
+data/uploads
+# keep dataset/metadata if present but exclude heavy uploads
+data/uploads/*
