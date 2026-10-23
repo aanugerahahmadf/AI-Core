@@ -104,7 +104,9 @@ def build() -> int:
             row_type,
             f"{row_type.capitalize()} {owner_id} Fixture",
             category,
-            15000000,
+            # Nilai bervariasi agar visualisasi notebook tidak gagal saat KDE
+            # menghitung kovarians pada fixture kecil.
+            15000000 + owner_id * 1000000 + (500000 if row_type == "package" else 0),
             "",
             "Vendor Fixture",
             str(UPLOAD_DIR / filename),   # path absolut milik mesin ini
