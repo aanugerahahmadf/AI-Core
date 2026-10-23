@@ -49,7 +49,7 @@ jobs:
       # path yang dihitung saat runtime, sehingga test CBIR benar-benar menguji
       # ekstraksi fitur (dan 2 gambar per produk, untuk menangkap regresi dedup).
       - name: Build CI fixture dataset
-        run: python make_ci_fixture.py
+         run: python ./make_ci_fixture.py
 
       - name: Rebuild feature index
         run: python -m src.features.build_features --method combined
@@ -84,7 +84,7 @@ jobs:
       - name: Prepare data
         run: |
           python -c "import os; [os.makedirs(d, exist_ok=True) for d in ['data/inputs', 'data/features', 'data/uploads', 'data/evaluation']]"
-          python make_ci_fixture.py
+           python ./make_ci_fixture.py
           python -m src.features.build_features --method combined
 
       - name: Check notebook executes
