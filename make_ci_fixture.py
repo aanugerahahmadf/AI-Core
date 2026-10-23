@@ -83,10 +83,12 @@ def build() -> int:
         ("catalog-2.png", (200, 210, 225), "Catalog 1 B"),
         ("catalog-3.png", (218, 165, 32), "Catalog 2 A"),
         ("catalog-4.png", (240, 200, 120), "Catalog 2 B"),
-        ("catalog-5.png", (255, 192, 203), "Package 1 A"),
-        ("catalog-6.png", (245, 175, 190), "Package 1 B"),
-        ("catalog-7.png", (173, 216, 230), "Package 2 A"),
-        ("catalog-8.png", (150, 200, 220), "Package 2 B"),
+        # Mobile-And-Backend tidak menyimpan source package image di public/;
+        # package tier dibuat sebagai fixture sintetis dengan nama yang jelas.
+        ("package-tier-1a.png", (255, 192, 203), "Package Tier 1 A"),
+        ("package-tier-1b.png", (245, 175, 190), "Package Tier 1 B"),
+        ("package-tier-2a.png", (173, 216, 230), "Package Tier 2 A"),
+        ("package-tier-2b.png", (150, 200, 220), "Package Tier 2 B"),
     ]
 
     # (file, type, owner_id, category)
@@ -95,10 +97,10 @@ def build() -> int:
         ("catalog-2.png", "catalog", 1, "backdrop pelaminan"),
         ("catalog-3.png", "catalog", 2, "backdrop pelaminan"),
         ("catalog-4.png", "catalog", 2, "backdrop pelaminan"),
-        ("catalog-5.png", "package", 1, "dekorasi pelaminan"),
-        ("catalog-6.png", "package", 1, "dekorasi pelaminan"),
-        ("catalog-7.png", "package", 2, "dekorasi pelaminan"),
-        ("catalog-8.png", "package", 2, "dekorasi pelaminan"),
+        ("package-tier-1a.png", "package", 1, "dekorasi pelaminan"),
+        ("package-tier-1b.png", "package", 1, "dekorasi pelaminan"),
+        ("package-tier-2a.png", "package", 2, "dekorasi pelaminan"),
+        ("package-tier-2b.png", "package", 2, "dekorasi pelaminan"),
     ]
 
     for filename, color, label in images:
