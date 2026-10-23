@@ -193,12 +193,13 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
     """
     from src.addons.extraction.extractor import extractors, get_extractor
     from src.addons.data import load_dataset_csv, save_feature_database, resolve_portable_path
+    from src.addons.types import normalize_type
 
     csv_file = csv_path or _resolve_csv()
     rows     = load_dataset_csv(csv_file)
 
-    products = [r for r in rows if r.get("Type", "").strip().lower() == "product"]
-    packages = [r for r in rows if r.get("Type", "").strip().lower() == "package"]
+    catalogs = [r for r in rows if normalize_type(r.get("Type")) == "catalog"]
+    packages = [r for r in rows if normalize_type(r.get("Type")) == "package"]
 
     methods = list(extractors.keys()) if method == "all" else [method]
 
@@ -207,7 +208,7 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
     print("=" * 60)
     print("CSV      : " + csv_file)
     print("Metode   : " + str(methods))
-    print("Products : " + str(len(products)))
+    print("Catalogs : " + str(len(catalogs)))
     print("Packages : " + str(len(packages)))
     print("Total    : " + str(len(rows)))
     print()
@@ -225,7 +226,7 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
 
         for row in rows:
             owner_id    = row.get("ID", "").strip()
-            item_type   = row.get("Type", "product").strip().lower()
+            item_type   = normalize_type(row.get("Type", "catalog"))
             name        = row.get("Name", "").strip()
             category    = row.get("Category", "unknown").strip().lower()
             price       = row.get("Price", "0").strip()
@@ -233,9 +234,6 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
             image_path  = row.get("Image_Path", "").strip()
             description = row.get("Description", "").strip()
             organizer   = row.get("Organizer", "").strip()
-
-            if item_type not in ("product", "package"):
-                item_type = "product"
 
             image_path = image_path.replace("/", os.sep).replace("\\", os.sep)
             image_path = resolve_portable_path(image_path)

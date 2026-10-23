@@ -64,16 +64,16 @@ def build() -> int:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 8 gambar, 2 per item. Dua gambar per produk itu penting: itulah kondisi
+    # 8 gambar, 2 per item. Dua gambar per katalog itu penting: itulah kondisi
     # nyata (produk punya galeri), dan itulah yang rusak ketika
     # `/api/index/add` salah dedup per (type, owner_id) sehingga tiap produk
     # hanya menyisakan 1 gambar. Fixture dengan 1 gambar/produk tidak akan
     # menangkap bug itu.
     images = [
-        ("ci-product-1a.jpg", (220, 220, 220), "Product 1 A"),
-        ("ci-product-1b.jpg", (200, 210, 225), "Product 1 B"),
-        ("ci-product-2a.jpg", (218, 165, 32), "Product 2 A"),
-        ("ci-product-2b.jpg", (240, 200, 120), "Product 2 B"),
+        ("ci-catalog-1a.jpg", (220, 220, 220), "Catalog 1 A"),
+        ("ci-catalog-1b.jpg", (200, 210, 225), "Catalog 1 B"),
+        ("ci-catalog-2a.jpg", (218, 165, 32), "Catalog 2 A"),
+        ("ci-catalog-2b.jpg", (240, 200, 120), "Catalog 2 B"),
         ("ci-package-1a.jpg", (255, 192, 203), "Package 1 A"),
         ("ci-package-1b.jpg", (245, 175, 190), "Package 1 B"),
         ("ci-package-2a.jpg", (173, 216, 230), "Package 2 A"),
@@ -82,10 +82,10 @@ def build() -> int:
 
     # (file, type, owner_id, category)
     layout = [
-        ("ci-product-1a.jpg", "product", 1, "backdrop pelaminan"),
-        ("ci-product-1b.jpg", "product", 1, "backdrop pelaminan"),
-        ("ci-product-2a.jpg", "product", 2, "backdrop pelaminan"),
-        ("ci-product-2b.jpg", "product", 2, "backdrop pelaminan"),
+        ("ci-catalog-1a.jpg", "catalog", 1, "backdrop pelaminan"),
+        ("ci-catalog-1b.jpg", "catalog", 1, "backdrop pelaminan"),
+        ("ci-catalog-2a.jpg", "catalog", 2, "backdrop pelaminan"),
+        ("ci-catalog-2b.jpg", "catalog", 2, "backdrop pelaminan"),
         ("ci-package-1a.jpg", "package", 1, "dekorasi pelaminan"),
         ("ci-package-1b.jpg", "package", 1, "dekorasi pelaminan"),
         ("ci-package-2a.jpg", "package", 2, "dekorasi pelaminan"),
