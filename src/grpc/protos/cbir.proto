@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package weddingapp.cbir;
+
+// option python_package = "generated";
+
+// CBIR Service - AI Core gRPC
+service CbirService {
+  rpc Search (CbirSearchRequest) returns (CbirSearchResponse);
+  rpc GetStats (CbirStatsRequest) returns (CbirStatsResponse);
+  rpc AddToIndex (AddToIndexRequest) returns (AddToIndexResponse);
+  rpc RemoveFromIndex (RemoveFromIndexRequest) returns (RemoveFromIndexResponse);
+  rpc RebuildIndex (RebuildIndexRequest) returns (RebuildIndexResponse);
+  rpc ClearIndex (ClearIndexRequest) returns (ClearIndexResponse);
+  rpc ExtractFeatures (ExtractFeaturesRequest) returns (ExtractFeaturesResponse);
+  rpc GetHealth (HealthRequest) returns (HealthResponse);
+}
+
+message CbirSearchRequest {
+  bytes image_data = 1;
+  int32 limit = 2;
+  double min_similarity = 3;
+  bool rerank = 4;
+}
+
+message CbirSearchResponse {
+  repeated CbirResult results = 1;
+  double search_time = 2;
+  int32 total_results = 3;
+  string error = 4;
+}
+
+message CbirStatsRequest {}
+
+message CbirStatsResponse {
+  int32 total_images = 1;
+  int32 total_features = 2;
+  string database_size = 3;
+  string last_updated = 4;
+  string status = 5;
+  string message = 6;
+}
+
+message AddToIndexRequest {
+  string image_path = 1;
+  map<string, string> metadata = 2;
+}
+
+message AddToIndexResponse {
+  bool success = 1;
+  string message = 2;
+  int64 entry_id = 3;
+}
+
+message RemoveFromIndexRequest {
+  int64 metadata_id = 1;
+}
+
+message RemoveFromIndexResponse {
+  bool success = 1;
+  string message = 2;
+  int32 removed = 3;
+}
+
+message RebuildIndexRequest {
+  string csv_path = 1;
+  string app_url = 2;
+}
+
+message RebuildIndexResponse {
+  bool success = 1;
+  string message = 2;
+  int32 total = 3;
+  int32 skipped = 4;
+  double elapsed_seconds = 5;
+}
+
+message ClearIndexRequest {}
+
+message ClearIndexResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ExtractFeaturesRequest {
+  bytes image_data = 1;
+}
+
+message ExtractFeaturesResponse {
+  bool success = 1;
+  string method = 2;
+  int32 feature_dim = 3;
+  repeated double feature_preview = 4;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  string version = 2;
+  bool cbir_enabled = 3;
+  bool face_verify_enabled = 4;
+  bool ktp_verify_enabled = 5;
+  bool ocr_enabled = 6;
+}
+
+message CbirResult {
+  string type = 1;
+  double similarity = 2;
+  double score = 3;
+  CbirResultData data = 4;
+}
+
+message CbirResultData {
+  int64 id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  double price = 5;
+  double discount_price = 6;
+  double final_price = 7;
+  string image_url = 8;
+  string category = 9;
+}

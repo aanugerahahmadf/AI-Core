@@ -1,0 +1,6 @@
+# Wedding CBIR GraphQL Schema (placeholder)
+type Query {
+  health: String
+  status: String
+}
+""" path="D:\WeddingFlowersDecorationApp\ai_core\src\graphql\schema.graphql"

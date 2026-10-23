@@ -73,7 +73,7 @@ class TestHealthEndpoints(unittest.TestCase):
     """Test GET endpoints yang tidak butuh gambar."""
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         flask_app.app.config["TESTING"] = True
         self.client = flask_app.app.test_client()
 
@@ -103,11 +103,11 @@ class TestHealthEndpoints(unittest.TestCase):
         resp = self.client.get("/status")
         self.assertEqual(resp.status_code, 200)
 
-    def test_status_has_total_products(self):
+    def test_status_has_total_catalogs(self):
         resp = self.client.get("/status")
         data = json.loads(resp.data)
-        self.assertIn("total_products", data)
-        self.assertIsInstance(data["total_products"], int)
+        self.assertIn("total_catalogs", data)
+        self.assertIsInstance(data["total_catalogs"], int)
 
     def test_status_has_categories(self):
         resp = self.client.get("/status")
@@ -129,7 +129,7 @@ class TestSearchEndpoint(unittest.TestCase):
     """Test POST /api/search."""
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         flask_app.app.config["TESTING"] = True
         self.client      = flask_app.app.test_client()
         self.sample_path = _get_sample_image_path()
@@ -258,7 +258,7 @@ class TestIndexEndpoints(unittest.TestCase):
     """Test POST /api/index/* endpoints."""
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         flask_app.app.config["TESTING"] = True
         self.client      = flask_app.app.test_client()
         self.sample_path = _get_sample_image_path()
@@ -292,7 +292,7 @@ class TestIndexEndpoints(unittest.TestCase):
             "/api/index/add",
             json={
                 "image_path": self.sample_path,
-                "metadata"  : {"type": "product", "owner_id": 999, "name": "Test", "category": "test"},
+                "metadata"  : {"type": "catalog", "owner_id": 999, "name": "Test", "category": "test"},
             },
         )
         self.assertEqual(resp.status_code, 200)
@@ -305,7 +305,7 @@ class TestIndexEndpoints(unittest.TestCase):
             self.skipTest("Tidak ada gambar sample")
         payload = {
             "image_path": self.sample_path,
-            "metadata"  : {"type": "product", "owner_id": 777, "name": "Dedup", "category": "test"},
+            "metadata"  : {"type": "catalog", "owner_id": 777, "name": "Dedup", "category": "test"},
         }
         self.client.post("/api/index/add", json=payload)
         self.client.post("/api/index/add", json=payload)
@@ -315,7 +315,7 @@ class TestIndexEndpoints(unittest.TestCase):
             db = _json.load(f)
         count = sum(
             1 for img in db.get("images", [])
-            if (img.get("metadata", {}).get("type"), img.get("metadata", {}).get("owner_id")) == ("product", 777)
+            if (img.get("metadata", {}).get("type"), img.get("metadata", {}).get("owner_id")) == ("catalog", 777)
         )
         self.assertEqual(count, 1, "Index tidak boleh berisi duplikat untuk (type, owner_id) sama")
 
@@ -376,14 +376,14 @@ class TestIndexEndpoints(unittest.TestCase):
         self.client.post("/api/index/clear")
         resp = self.client.get("/status")
         data = json.loads(resp.data)
-        self.assertEqual(data["total_products"], 0)
+        self.assertEqual(data["total_catalogs"], 0)
 
 
 class TestExtractEndpoint(unittest.TestCase):
     """Test POST /api/features/extract."""
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         flask_app.app.config["TESTING"] = True
         self.client      = flask_app.app.test_client()
         self.sample_path = _get_sample_image_path()
@@ -420,7 +420,7 @@ class TestVisionEndpoints(unittest.TestCase):
     """Test POST /api/face/verify  &  POST /api/ktp/verify (Computer Vision)."""
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         flask_app.app.config["TESTING"] = True
         self.client = flask_app.app.test_client()
 
@@ -547,7 +547,7 @@ class TestVisionEndpoints(unittest.TestCase):
         self.assertIn("NO_FACE", payload["blocking_issue"])
 
     def test_ktp_verify_doc_labels_cover_every_doc_type(self):
-        import app as flask_app
+        import src.app as flask_app
 
         self.assertEqual(
             sorted(flask_app.IDENTITY_DOC_LABELS), sorted(flask_app.IDENTITY_DOC_TYPES)
@@ -602,30 +602,30 @@ class TestOcrHelpers(unittest.TestCase):
     """Test helper OCR tanpa memanggil model (cepat & deterministik)."""
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         self.app = flask_app
 
     def test_extract_ktp_number_contiguous(self):
-        import app as a
+        import src.app as a
         self.assertEqual(a._extract_ktp_number([""]), None)
         self.assertEqual(a._extract_ktp_number(["N I K", "3171011203030004", "PRIA"]), "3171011203030004")
 
     def test_extract_ktp_number_with_spaces(self):
-        import app as a
+        import src.app as a
         self.assertEqual(a._extract_ktp_number(["NIK : 3171 0112 0303 0004"]), "3171011203030004")
 
     def test_extract_amounts_rp_ribu_comma(self):
-        import app as a
+        import src.app as a
         self.assertIn(1500000, a._extract_amounts(["Total Rp 1.500.000"]))
         self.assertIn(500000, a._extract_amounts(["Rp500.000"]))
 
     def test_extract_amounts_plain_and_comma(self):
-        import app as a
+        import src.app as a
         self.assertIn(1500000, a._extract_amounts(["Amount 1500000"]))
         self.assertIn(1500000, a._extract_amounts(["IDR 1,500,000"]))
 
     def test_normalize_number(self):
-        import app as a
+        import src.app as a
         self.assertEqual(a._normalize_number("Rp 1.500.000"), 1500000.0)
         self.assertEqual(a._normalize_number("1,500,000"), 1500000.0)
         self.assertEqual(a._normalize_number("1500000"), 1500000.0)
@@ -639,7 +639,7 @@ class TestVideoSupport(unittest.TestCase):
     """
 
     def setUp(self):
-        import app as flask_app
+        import src.app as flask_app
         flask_app.app.config["TESTING"] = True
         self.client = flask_app.app.test_client()
         self.video_path = None
@@ -670,7 +670,7 @@ class TestVideoSupport(unittest.TestCase):
         return buf_path, data
 
     def test_is_video_file_helper(self):
-        import app as a
+        import src.app as a
         self.assertTrue(a.is_video_file("video.mp4"))
         self.assertTrue(a.is_video_file("video.MOV"))
         self.assertFalse(a.is_video_file("image.jpg"))

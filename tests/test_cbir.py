@@ -14,11 +14,11 @@ class TestDataLoading(unittest.TestCase):
     def test_dataset_csv_exists(self):
         self.assertTrue(os.path.exists(DATASET_CSV), "dataset.csv tidak ditemukan. Jalankan: php artisan cbir:sync")
 
-    def test_dataset_has_products_and_packages(self):
+    def test_dataset_has_catalogs_and_packages(self):
         from src.addons.data import load_dataset_csv
         rows = load_dataset_csv(DATASET_CSV)
         types = [r.get("Type","").lower() for r in rows]
-        self.assertIn("product", types, "Tidak ada product di dataset.csv")
+        self.assertIn("catalog", types, "Tidak ada katalog di dataset.csv")
         self.assertIn("package", types, "Tidak ada package di dataset.csv")
 
     def test_dataset_no_item_type(self):
@@ -26,17 +26,17 @@ class TestDataLoading(unittest.TestCase):
         rows = load_dataset_csv(DATASET_CSV)
         for row in rows:
             t = row.get("Type","").lower()
-            self.assertNotEqual(t, "item", "Type 'item' tidak valid, harus 'product' atau 'package'")
+            self.assertNotEqual(t, "item", "Type 'item' tidak valid, harus 'catalog' atau 'package'")
 
     def test_metadata_json_exists(self):
         self.assertTrue(os.path.exists(METADATA), "metadata.json tidak ditemukan. Jalankan: python rebuild_index.py")
 
-    def test_metadata_has_products_and_packages(self):
+    def test_metadata_has_catalogs_and_packages(self):
         from src.addons.data import load_feature_database
         db   = load_feature_database(METADATA)
         imgs = db.get("images", [])
         types = [img.get("metadata", {}).get("type", "") for img in imgs]
-        self.assertIn("product", types, "Tidak ada product di metadata.json")
+        self.assertIn("catalog", types, "Tidak ada katalog di metadata.json")
         self.assertIn("package", types, "Tidak ada package di metadata.json")
 
     def test_metadata_no_duplicates(self):

@@ -105,7 +105,7 @@ goto end
 :: ==============================================================================
 :sync
 echo [SYNC] Rebuilding CBIR index from %CSV_PATH%...
-%PYTHON% rebuild_index.py --csv %CSV_PATH% --app-url %APP_URL%
+%PYTHON% -m src.rebuild_index --csv %CSV_PATH% --app-url %APP_URL%
 goto end
 
 :dataset
@@ -137,7 +137,7 @@ goto end
 :: ==============================================================================
 :lint
 echo [LINT] Running pylint...
-%PYLINT% src/ app.py rebuild_index.py ai_sync.py cbir_engine.py --rcfile=pylintrc --score=yes
+%PYLINT% src/ make_ci_fixture.py --rcfile=pylintrc --score=yes
 goto end
 
 :check
@@ -158,7 +158,7 @@ goto end
 :server
 echo [SERVER] Starting Flask server on port 5000...
 echo [SERVER] Press Ctrl+C to stop
-%PYTHON% app.py
+%PYTHON% -m src.run_all
 goto end
 
 :: ==============================================================================

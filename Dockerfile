@@ -39,4 +39,4 @@ RUN mkdir -p data uploads reports
 EXPOSE 5000
 
 # Run Flask. Reads FLASK_HOST / FLASK_PORT from .env via app.py
-CMD ["python", "app.py"]
+CMD ["python", "-m", "src.routes"]
