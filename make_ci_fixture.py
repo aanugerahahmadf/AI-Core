@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import csv
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -33,6 +34,9 @@ ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 UPLOAD_DIR = DATA_DIR / "uploads"
 CSV_PATH = DATA_DIR / "dataset.csv"
+BACKEND_CATALOG_DIR = (
+    ROOT.parent / "Mobile-And-Backend" / "public" / "images" / "catalog"
+)
 
 HEADER = [
     "ID", "Type", "Name", "Category", "Price", "Discount_Price",
@@ -42,6 +46,11 @@ HEADER = [
 
 def _make_image(path: Path, color: tuple, text: str) -> None:
     """Gambar RGB polos 256x256 dengan label di tengah."""
+    source = BACKEND_CATALOG_DIR / path.name
+    if source.is_file():
+        shutil.copy2(source, path)
+        return
+
     img = Image.new("RGB", (256, 256), color=color)
     draw = ImageDraw.Draw(img)
 
@@ -70,26 +79,26 @@ def build() -> int:
     # hanya menyisakan 1 gambar. Fixture dengan 1 gambar/produk tidak akan
     # menangkap bug itu.
     images = [
-        ("ci-catalog-1a.jpg", (220, 220, 220), "Catalog 1 A"),
-        ("ci-catalog-1b.jpg", (200, 210, 225), "Catalog 1 B"),
-        ("ci-catalog-2a.jpg", (218, 165, 32), "Catalog 2 A"),
-        ("ci-catalog-2b.jpg", (240, 200, 120), "Catalog 2 B"),
-        ("ci-package-1a.jpg", (255, 192, 203), "Package 1 A"),
-        ("ci-package-1b.jpg", (245, 175, 190), "Package 1 B"),
-        ("ci-package-2a.jpg", (173, 216, 230), "Package 2 A"),
-        ("ci-package-2b.jpg", (150, 200, 220), "Package 2 B"),
+        ("catalog-1.png", (220, 220, 220), "Catalog 1 A"),
+        ("catalog-2.png", (200, 210, 225), "Catalog 1 B"),
+        ("catalog-3.png", (218, 165, 32), "Catalog 2 A"),
+        ("catalog-4.png", (240, 200, 120), "Catalog 2 B"),
+        ("catalog-5.png", (255, 192, 203), "Package 1 A"),
+        ("catalog-6.png", (245, 175, 190), "Package 1 B"),
+        ("catalog-7.png", (173, 216, 230), "Package 2 A"),
+        ("catalog-8.png", (150, 200, 220), "Package 2 B"),
     ]
 
     # (file, type, owner_id, category)
     layout = [
-        ("ci-catalog-1a.jpg", "catalog", 1, "backdrop pelaminan"),
-        ("ci-catalog-1b.jpg", "catalog", 1, "backdrop pelaminan"),
-        ("ci-catalog-2a.jpg", "catalog", 2, "backdrop pelaminan"),
-        ("ci-catalog-2b.jpg", "catalog", 2, "backdrop pelaminan"),
-        ("ci-package-1a.jpg", "package", 1, "dekorasi pelaminan"),
-        ("ci-package-1b.jpg", "package", 1, "dekorasi pelaminan"),
-        ("ci-package-2a.jpg", "package", 2, "dekorasi pelaminan"),
-        ("ci-package-2b.jpg", "package", 2, "dekorasi pelaminan"),
+        ("catalog-1.png", "catalog", 1, "backdrop pelaminan"),
+        ("catalog-2.png", "catalog", 1, "backdrop pelaminan"),
+        ("catalog-3.png", "catalog", 2, "backdrop pelaminan"),
+        ("catalog-4.png", "catalog", 2, "backdrop pelaminan"),
+        ("catalog-5.png", "package", 1, "dekorasi pelaminan"),
+        ("catalog-6.png", "package", 1, "dekorasi pelaminan"),
+        ("catalog-7.png", "package", 2, "dekorasi pelaminan"),
+        ("catalog-8.png", "package", 2, "dekorasi pelaminan"),
     ]
 
     for filename, color, label in images:
