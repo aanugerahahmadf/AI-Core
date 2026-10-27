@@ -15,6 +15,7 @@ import sys
 import argparse
 import signal
 import time
+import hmac
 from concurrent import futures
 
 # Import grpcio BEFORE adding src/ to sys.path, otherwise the local
@@ -43,10 +44,33 @@ except ImportError:
     from services.cbir_service import CbirServiceServicer
 
 
+class ApiKeyInterceptor(grpc.ServerInterceptor):
+    def intercept_service(self, continuation, handler_call_details):
+        handler = continuation(handler_call_details)
+        expected = os.environ.get('AI_CORE_API_KEY', '')
+        method = handler_call_details.method.rsplit('/', 1)[-1]
+        if not expected or method == 'GetHealth' or handler is None:
+            return handler
+
+        def authenticated(request, context):
+            metadata = dict(context.invocation_metadata())
+            supplied = metadata.get('x-ai-core-key', '')
+            if not hmac.compare_digest(expected, supplied):
+                context.abort(grpc.StatusCode.UNAUTHENTICATED, 'AI Core authentication required')
+            return handler.unary_unary(request, context)
+
+        return grpc.unary_unary_rpc_method_handler(
+            authenticated,
+            request_deserializer=handler.request_deserializer,
+            response_serializer=handler.response_serializer,
+        )
+
+
 def create_server(port=50052, max_workers=10):
     """Create and configure the gRPC server."""
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=max_workers),
+        interceptors=[ApiKeyInterceptor()],
         options=[
             ('grpc.max_send_message_length', 50 * 1024 * 1024),  # 50MB
             ('grpc.max_receive_message_length', 50 * 1024 * 1024),  # 50MB
@@ -59,7 +83,12 @@ def create_server(port=50052, max_workers=10):
     )
     
     # Bind to port
-    server.add_insecure_port(f'[::]:{port}')
+    host = os.environ.get('AI_CORE_GRPC_HOST', '127.0.0.1')
+    # TLS credentials are deployment-specific and must be provided by the
+    # service mesh/reverse proxy. Refuse a public bind without explicit opt-in.
+    if host not in {'127.0.0.1', 'localhost', '::1'} and os.environ.get('AI_CORE_GRPC_ALLOW_INSECURE_PUBLIC') != 'true':
+        raise RuntimeError('Refusing public insecure gRPC bind; use TLS or explicit private-network opt-in.')
+    server.add_insecure_port(f'{host}:{port}')
     
     return server
 

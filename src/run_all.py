@@ -20,13 +20,14 @@ from src.graphql.server import app as gql_app
 
 
 def run_rest():
-    host = "0.0.0.0"
+    host = os.environ.get("FLASK_HOST", "127.0.0.1")
     port = int(os.environ.get("FLASK_PORT", 5000))
     rest_app.run(host=host, port=port, debug=False, threaded=True, use_reloader=False)
 
 
 def run_graphql():
-    gql_app.run(host="0.0.0.0", port=5001, debug=False, use_reloader=False)
+    host = os.environ.get("FLASK_HOST", "127.0.0.1")
+    gql_app.run(host=host, port=5001, debug=False, use_reloader=False)
 
 
 def main():
@@ -35,9 +36,7 @@ def main():
     t_rest.start()
     t_gql.start()
     time.sleep(1)
-    print("REST    : http://0.0.0.0:5000")
-    print("gRPC    : 0.0.0.0:50052")
-    print("GraphQL : http://0.0.0.0:5001/graphql")
+    print("REST/gRPC/GraphQL started on configured private interfaces")
     # gRPC blocks (main thread, signal handling ok)
     grpc_server.serve(port=50052, max_workers=10)
 
