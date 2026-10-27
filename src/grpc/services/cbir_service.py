@@ -509,7 +509,10 @@ def serve(port=50052, max_workers=10):
     # yang menghasilkan server kosong.
     cbir_pb2_grpc.add_CbirServiceServicer_to_server(CbirServiceServicer(), server)
 
-    server.add_insecure_port(f'[::]:{port}')
+    host = os.environ.get('AI_CORE_GRPC_HOST', '127.0.0.1')
+    if host not in {'127.0.0.1', 'localhost', '::1'} and os.environ.get('AI_CORE_GRPC_ALLOW_INSECURE_PUBLIC') != 'true':
+        raise RuntimeError('Refusing public insecure gRPC bind; use TLS or explicit private-network opt-in.')
+    server.add_insecure_port(f'{host}:{port}')
     server.start()
     
     print(f"AI Core gRPC server started on port {port}")

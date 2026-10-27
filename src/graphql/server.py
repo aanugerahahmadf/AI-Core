@@ -23,7 +23,7 @@ def graphql_endpoint():
 
 def main():
     print("AI Core GraphQL server (placeholder) running on port 5001")
-    app.run(host="0.0.0.0", port=5001, debug=False)
+    app.run(host=os.environ.get("FLASK_HOST", "127.0.0.1"), port=5001, debug=False)
 
 
 if __name__ == "__main__":
