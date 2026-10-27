@@ -28,3 +28,6 @@ werkzeug>=2.2.0
 python-dotenv>=1.0.0
 requests>=2.28.0
 tqdm>=4.65.0
+
+# Test runner (also configured in pyproject.toml)
+pytest>=8.0

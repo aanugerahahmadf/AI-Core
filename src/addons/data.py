@@ -28,6 +28,42 @@ def resolve_portable_path(path: str) -> str:
     ai_core    = os.path.dirname(src_dir)
     parent_dir = os.path.dirname(ai_core)  # D:\Weeding-Organizer-CBIR
 
+    # Current checkout layout.  The CSV may contain paths from an older
+    # Laravel storage layout (``storage/app/public/1/catalog-1.png``), while
+    # the media files in this checkout are stored as
+    # ``storage/app/public/Catalogs/1-catalog-1.png``.  Resolve that format
+    # before trying the historical sibling-project rules below.
+    project_backend = os.path.join(parent_dir, "Mobile-And-Backend")
+    public_storage = os.path.join(project_backend, "storage", "app", "public")
+    if os.path.isdir(public_storage):
+        normalized = path.replace("\\", "/")
+        marker = "/storage/app/public/"
+        if marker in normalized:
+            relative = normalized.split(marker, 1)[1]
+            parts = relative.split("/", 1)
+            if len(parts) == 2:
+                owner_dir, filename = parts
+                direct_candidates = [
+                    os.path.join(public_storage, owner_dir, filename),
+                    os.path.join(public_storage, "Catalogs", f"{owner_dir}-{filename}"),
+                    os.path.join(public_storage, "Packages", f"{owner_dir}-{filename}"),
+                ]
+                for candidate in direct_candidates:
+                    if os.path.exists(candidate):
+                        return os.path.abspath(candidate)
+
+                # Some old exports used a different numeric owner prefix.
+                # Match the basename only as a last resort, never before the
+                # owner-specific candidates above.
+                for media_dir in ("Catalogs", "Packages"):
+                    candidate_dir = os.path.join(public_storage, media_dir)
+                    if os.path.isdir(candidate_dir):
+                        for filename_on_disk in os.listdir(candidate_dir):
+                            if filename_on_disk.endswith("-" + filename):
+                                candidate = os.path.join(candidate_dir, filename_on_disk)
+                                if os.path.isfile(candidate):
+                                    return os.path.abspath(candidate)
+
     # ----------------------------------------------------------------
     # PRIORITAS 1: Langsung cek Mobile-App terlebih dahulu
     # ----------------------------------------------------------------
@@ -161,6 +197,41 @@ def _canonicalize_features(features: dict[str, Any]) -> dict[str, Any]:
     return features
 
 
+def _deduplicate_images(images: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove duplicate index rows without collapsing gallery images.
+
+    A gallery is allowed to contain several files for the same owner.  The
+    only invalid duplicate is the exact ``(type, owner_id, path)`` triple.
+    Older sync runs could append that triple repeatedly and could also reuse
+    an id, so normalize both invariants while loading the index.
+    """
+    result: list[dict[str, Any]] = []
+    seen_paths: set[tuple[Any, Any, str]] = set()
+    seen_ids: set[Any] = set()
+    numeric_ids = [
+        int(image.get("id"))
+        for image in images
+        if isinstance(image.get("id"), int) or str(image.get("id", "")).isdigit()
+    ]
+    next_id = max(numeric_ids, default=0) + 1
+
+    for image in images:
+        metadata = image.get("metadata", {}) or {}
+        key = (metadata.get("type"), metadata.get("owner_id"), image.get("path", ""))
+        if key in seen_paths:
+            continue
+        seen_paths.add(key)
+
+        image_id = image.get("id")
+        if image_id in seen_ids or image_id is None:
+            image["id"] = next_id
+            next_id += 1
+        seen_ids.add(image["id"])
+        result.append(image)
+
+    return result
+
+
 def _strip_features_for_disk(features: dict[str, Any]) -> dict[str, Any]:
     """
     Siapkan dict fitur untuk ditulis ke disk.
@@ -272,6 +343,8 @@ def load_feature_database(db_path: str) -> dict[str, Any]:
     else:
         data = {"images": []}
 
+    data["images"] = _deduplicate_images(data.get("images", []))
+
     with _DB_CACHE_LOCK:
         _DB_CACHE[cache_key] = (fingerprint[0], fingerprint[1], data)
 
@@ -295,6 +368,7 @@ def save_feature_database(db: dict[str, Any], db_path: str) -> None:
 
     payload: dict[str, Any] = dict(db)
     if isinstance(payload.get("images"), list):
+        payload["images"] = _deduplicate_images(payload["images"])
         payload["images"] = [
             {**img, "features": _strip_features_for_disk(img.get("features", {}))}
             for img in payload["images"]

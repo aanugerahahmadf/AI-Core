@@ -42,6 +42,9 @@ def require_internal_api_key():
         return None
 
     expected = os.environ.get("AI_CORE_API_KEY", "")
+    production = os.environ.get("FLASK_ENV", "").lower() == "production" or os.environ.get("APP_ENV", "").lower() == "production"
+    if production and not expected:
+        abort(503)
     if expected and not hmac.compare_digest(
         expected, request.headers.get("X-AI-Core-Key", "")
     ):
