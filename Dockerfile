@@ -36,6 +36,12 @@ COPY . .
 # Data / uploads dirs
 RUN mkdir -p data uploads reports
 
+# Do not run the image as root. The service only needs write access to its
+# runtime data and upload directories.
+RUN useradd --create-home --uid 10001 aiuser \
+    && chown -R aiuser:aiuser /app
+USER aiuser
+
 EXPOSE 5000
 
 # Run Flask. Reads FLASK_HOST / FLASK_PORT from .env via app.py

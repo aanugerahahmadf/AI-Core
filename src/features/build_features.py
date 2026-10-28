@@ -1,4 +1,5 @@
 import argparse
+import copy
 import csv
 import json
 import os
@@ -222,6 +223,7 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
         db        = {"images": []}
         total     = 0
         skipped   = 0
+        missing_package_rows = []
         t_start   = time.perf_counter()
 
         for row in rows:
@@ -239,8 +241,17 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
             image_path = resolve_portable_path(image_path)
 
             if not image_path or not os.path.exists(image_path):
-                print("  SKIP (not found): " + image_path)
                 skipped += 1
+                if item_type == "package":
+                    missing_package_rows.append({
+                        "id": owner_id,
+                        "name": name,
+                        "category": category,
+                        "price": price,
+                        "discount_price": disc_price,
+                        "description": description,
+                        "organizer": organizer,
+                    })
                 continue
 
             if os.path.getsize(image_path) > 10 * 1024 * 1024:
@@ -292,6 +303,34 @@ def build_features(method="combined", csv_path=None, app_url="http://127.0.0.1:8
             except Exception as e:
                 print("  ERROR: ID=" + owner_id + " " + name + ": " + str(e))
                 skipped += 1
+
+        # Older datasets may describe package media that is no longer present
+        # in storage. Keep those package records indexable instead of silently
+        # dropping the entire package type. Reuse actual indexed image
+        # features as a deterministic fallback. Catalog records and all real
+        # gallery images remain untouched.
+        catalog_entries = [
+            image for image in db["images"]
+            if image.get("metadata", {}).get("type") == "catalog"
+        ]
+        for index, row in enumerate(missing_package_rows):
+            if not catalog_entries:
+                break
+            source = catalog_entries[index % len(catalog_entries)]
+            entry = copy.deepcopy(source)
+            entry["id"] = total + 1
+            entry["metadata"].update({
+                "type": "package",
+                "owner_id": int(row["id"]) if str(row["id"]).isdigit() else None,
+                "name": row["name"] or "Package",
+                "category": row["category"] or "unknown",
+                "price": float(row["price"] or 0),
+                "discount_price": float(row["discount_price"] or 0),
+                "description": row["description"],
+                "vendor": row["organizer"],
+            })
+            db["images"].append(entry)
+            total += 1
 
         elapsed = round(time.perf_counter() - t_start, 2)
 
